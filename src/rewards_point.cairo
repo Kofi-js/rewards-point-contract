@@ -13,12 +13,44 @@ pub trait IRewardsPoint<TContractState> {
 
 #[starknet::contract]
 mod RewardsPoint {
-    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::event::EventEmitter;
+use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::{ContractAddress};
 
     #[storage]
     struct Storage {
         points: Map<ContractAddress, u16>,
+    }
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    pub enum Event {
+        PointsAdded: PointsAdded,
+        PointsRedeemed: PointsRedeemed,
+        PointsTransferred: PointsTransferred,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct PointsAdded {
+        #[key]
+        user_address: ContractAddress,
+        points: u16,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct PointsRedeemed {
+        #[key]
+        user_address: ContractAddress,
+        points: u16,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct PointsTransferred {
+        #[key]
+        from_address: ContractAddress,
+        #[key]
+        to_address: ContractAddress,
+        points: u16,
     }
 
     #[abi(embed_v0)]
@@ -27,6 +59,8 @@ mod RewardsPoint {
             let current_points = self.points.read(user_address);
             let new_points = current_points + points;
             self.points.write(user_address, new_points);
+            // Emit event for points added
+            self.emit(PointsAdded {user_address, points: new_points});
             true
         }
 
@@ -35,6 +69,8 @@ mod RewardsPoint {
             assert(current_points >= points, 'Insufficient points');
             let new_points = current_points - points;
             self.points.write(user_address, new_points);
+            // Emit event for points redeemed
+            self.emit(PointsRedeemed {user_address, points: new_points});
             true
         }
 
@@ -48,6 +84,8 @@ mod RewardsPoint {
             let to_points = self.points.read(to_address);
             self.points.write(from_address, from_points - points);
             self.points.write(to_address, to_points + points);
+            // Emit event for points transferred
+            self.emit(PointsTransferred {from_address, to_address, points});
             true
         }
     }
