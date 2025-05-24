@@ -1,4 +1,5 @@
 use starknet::ContractAddress;
+
 #[starknet::interface]
 pub trait IRewardsPoint<TContractState> {
     // Add points to a user
@@ -14,7 +15,7 @@ pub trait IRewardsPoint<TContractState> {
 #[starknet::contract]
 mod RewardsPoint {
     use starknet::event::EventEmitter;
-use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::{ContractAddress};
 
     #[storage]
@@ -59,8 +60,8 @@ use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
             let current_points = self.points.read(user_address);
             let new_points = current_points + points;
             self.points.write(user_address, new_points);
-            // Emit event for points added
-            self.emit(PointsAdded {user_address, points: new_points});
+            // Emit event for points added - should emit the points added, not total balance
+            self.emit(PointsAdded {user_address, points});
             true
         }
 
@@ -69,8 +70,8 @@ use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
             assert(current_points >= points, 'Insufficient points');
             let new_points = current_points - points;
             self.points.write(user_address, new_points);
-            // Emit event for points redeemed
-            self.emit(PointsRedeemed {user_address, points: new_points});
+            // Emit event for points redeemed - should emit the points redeemed, not remaining balance
+            self.emit(PointsRedeemed {user_address, points});
             true
         }
 
