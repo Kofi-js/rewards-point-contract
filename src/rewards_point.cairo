@@ -5,11 +5,11 @@ pub trait IRewardsPoint<TContractState> {
     // Add points to a user
     fn add_points(ref self: TContractState, user_address: ContractAddress, points: u16) -> bool;
     // Redeem points
-    fn redeem_points(ref self: TContractState, user_address: ContractAddress, points: u16) -> bool;
+    fn redeem_points(ref self: TContractState, points: u16) -> bool;
     // Check user points balance
     fn check_points(self: @TContractState, user_address: ContractAddress) -> u16;
     // Transfer points from one user to another
-    fn transfer_points(ref self: TContractState, from_address: ContractAddress, to_address: ContractAddress, points: u16) -> bool;
+    fn transfer_points(ref self: TContractState, to_address: ContractAddress, points: u16) -> bool;
 }
 
 #[starknet::contract]
@@ -17,6 +17,7 @@ mod RewardsPoint {
     use starknet::event::EventEmitter;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::{ContractAddress};
+    use starknet::get_caller_address;
 
     #[storage]
     struct Storage {
@@ -65,11 +66,11 @@ mod RewardsPoint {
             true
         }
 
-        fn redeem_points(ref self: ContractState, user_address: ContractAddress, points: u16) -> bool {
+        fn redeem_points(ref self: ContractState, points: u16) -> bool {
+            let user_address = get_caller_address();
             let current_points = self.points.read(user_address);
             assert(current_points >= points, 'Insufficient points');
-            let new_points = current_points - points;
-            self.points.write(user_address, new_points);
+            self.points.write(user_address, current_points - points);
             // Emit event for points redeemed - should emit the points redeemed, not remaining balance
             self.emit(PointsRedeemed {user_address, points});
             true
@@ -79,7 +80,10 @@ mod RewardsPoint {
             self.points.read(user_address)
         }
 
-        fn transfer_points(ref self: ContractState, from_address: ContractAddress, to_address: ContractAddress, points: u16) -> bool {
+        fn transfer_points(ref self: ContractState, to_address: ContractAddress, points: u16) -> bool {
+            let from_address = get_caller_address();
+            assert(from_address != to_address, 'Cannot transfer points to self');
+            assert(points > 0, 'Points must be greater than 0');
             let from_points = self.points.read(from_address);
             assert(from_points >= points, 'Insufficient points');
             let to_points = self.points.read(to_address);
